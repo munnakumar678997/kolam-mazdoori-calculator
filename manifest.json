@@ -1,6 +1,6 @@
 {
-  "name": "Kolam Mazdoori Calculator",
-  "short_name": "Kolam Hisab",
+  "name": "Munna Kolam Mazdoori Calculator",
+  "short_name": "Munna Kolam",
   "description": "Kolam mazdoori payment aur hazri calculator",
   "start_url": "./index.html",
   "scope": "./",
