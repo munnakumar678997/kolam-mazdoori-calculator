@@ -1,0 +1,965 @@
+<!DOCTYPE html>
+<html lang="hi">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Kolam Mazdoori Calculator</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@500;600;700;800&family=JetBrains+Mono:wght@500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg1:#FFF4D6;
+    --bg2:#FFE3C2;
+    --charcoal:#241F3D;
+    --blue:#2E86DE;
+    --blue-dark:#1B5FA8;
+    --purple:#7B4FE0;
+    --purple-dark:#5A32B8;
+    --orange:#FF7A33;
+    --orange-dark:#E35C15;
+    --pink:#F0388A;
+    --pink-dark:#C41F6E;
+    --green:#0EA672;
+    --green-dark:#087A54;
+    --yellow:#FFC93C;
+    --card:#FFFFFF;
+    --ink:#2A2440;
+  }
+  *{box-sizing:border-box;}
+  body{
+    margin:0;
+    background:linear-gradient(180deg, var(--bg1) 0%, var(--bg2) 100%);
+    font-family:'Baloo 2', sans-serif;
+    color:var(--ink);
+    padding-bottom:60px;
+  }
+  header{
+    background:linear-gradient(120deg, var(--purple) 0%, var(--pink) 55%, var(--orange) 100%);
+    padding:22px 20px 28px;
+    position:relative;
+    overflow:hidden;
+  }
+  header::after{
+    content:"";
+    position:absolute;
+    bottom:0; left:0; right:0;
+    height:7px;
+    background:repeating-linear-gradient(90deg, var(--yellow) 0 16px, var(--charcoal) 16px 32px);
+  }
+  header h1{
+    color:#fff;
+    font-size:clamp(15px, 5.6vw, 21px);
+    font-weight:800;
+    margin:0 0 4px;
+    letter-spacing:0.1px;
+    text-shadow:0 2px 0 rgba(0,0,0,0.15);
+    white-space:nowrap;
+  }
+  header p{
+    color:#FFF0DA;
+    font-size:13px;
+    margin:0;
+    font-weight:600;
+  }
+  .wrap{max-width:520px; margin:0 auto; padding:18px 16px;}
+
+  .card{
+    background:var(--card);
+    border-radius:16px;
+    padding:16px;
+    margin-bottom:16px;
+    box-shadow:0 4px 14px rgba(70,40,120,0.12);
+    border:2px solid transparent;
+  }
+  .card.blue{border-color:#CFE3FB;}
+  .card.purple{border-color:#E4D9FB;}
+
+  .card h2{
+    font-size:15.5px;
+    font-weight:700;
+    margin:0 0 12px;
+    display:flex;
+    align-items:center;
+    gap:8px;
+  }
+  .card.blue h2{color:var(--blue-dark);}
+  .card.purple h2{color:var(--purple-dark);}
+
+  .card h2 .num{
+    color:#fff;
+    font-family:'JetBrains Mono',monospace;
+    font-size:11px;
+    font-weight:700;
+    width:22px;height:22px;
+    border-radius:50%;
+    display:flex;align-items:center;justify-content:center;
+    flex-shrink:0;
+  }
+  .card.blue h2 .num{background:linear-gradient(135deg, var(--blue), var(--blue-dark));}
+  .card.purple h2 .num{background:linear-gradient(135deg, var(--purple), var(--purple-dark));}
+
+  label{
+    font-size:13px;
+    font-weight:700;
+    color:var(--ink);
+    display:block;
+    margin-bottom:6px;
+  }
+  input[type=number], input[type=text]{
+    width:100%;
+    padding:11px 12px;
+    border-radius:10px;
+    border:2px solid #E4DEF5;
+    background:#FAF9FF;
+    font-family:'JetBrains Mono',monospace;
+    font-size:15px;
+    font-weight:700;
+    color:var(--charcoal);
+  }
+  input[type=text]{font-family:'Baloo 2',sans-serif; font-weight:600; font-size:15px;}
+  input:focus{outline:3px solid var(--yellow); outline-offset:1px; border-color:var(--orange);}
+
+  .totals{
+    display:grid;
+    grid-template-columns:1fr 1fr 1fr;
+    gap:8px;
+    margin-top:14px;
+  }
+  .totals div{
+    border-radius:10px;
+    padding:10px 6px;
+    text-align:center;
+    color:#fff;
+  }
+  .totals div:nth-child(1){background:linear-gradient(135deg,var(--blue),var(--blue-dark));}
+  .totals div:nth-child(2){background:linear-gradient(135deg,var(--orange),var(--orange-dark));}
+  .totals div:nth-child(3){background:linear-gradient(135deg,var(--green),var(--green-dark));}
+  .totals .lbl{color:rgba(255,255,255,0.85); font-size:10.5px; font-weight:700;}
+  .totals .val{font-family:'JetBrains Mono',monospace; font-weight:700; font-size:15px; margin-top:2px;}
+
+  .worker-row{
+    background:#FBF9FF;
+    border:2px solid #D9CCF7;
+    border-left:7px solid #7B4FE0;
+    border-radius:12px;
+    padding:14px 12px 12px;
+    margin-bottom:12px;
+    position:relative;
+    box-shadow:0 3px 10px rgba(70,40,120,0.08);
+    transition:0.2s;
+  }
+  .worker-row .grid{
+    display:grid;
+    grid-template-columns:1fr 1fr;
+    gap:10px;
+  }
+  .worker-row .full{grid-column:1/-1;}
+  .worker-row label{white-space:nowrap; overflow:hidden; text-overflow:ellipsis; font-size:12.5px;}
+  .worker-row .mult-hint{
+    font-size:11px;
+    color:#8A7FB0;
+    margin-top:4px;
+    font-weight:600;
+  }
+  .remove-btn{
+    position:absolute;
+    top:8px; right:8px;
+    background:var(--pink);
+    color:#fff;
+    border:none;
+    width:26px;height:26px;
+    border-radius:50%;
+    font-size:14px;
+    font-weight:700;
+    cursor:pointer;
+    line-height:1;
+    box-shadow:0 2px 0 var(--pink-dark);
+  }
+
+  .lock-row{
+    display:flex;
+    align-items:center;
+    gap:9px;
+    background:#F3EEFF;
+    border-radius:9px;
+    padding:8px 10px;
+    margin-top:2px;
+  }
+  .lock-row .lock-text{
+    font-size:12px;
+    font-weight:700;
+    color:var(--purple-dark);
+    flex:1;
+  }
+  .switch{
+    position:relative;
+    width:42px;
+    height:24px;
+    flex-shrink:0;
+  }
+  .switch input{
+    opacity:0;
+    width:0;
+    height:0;
+  }
+  .switch-track{
+    position:absolute;
+    inset:0;
+    background:#CFC5EE;
+    border-radius:20px;
+    transition:0.2s;
+    cursor:pointer;
+  }
+  .switch-track::before{
+    content:"";
+    position:absolute;
+    width:18px;height:18px;
+    left:3px; top:3px;
+    background:#fff;
+    border-radius:50%;
+    transition:0.2s;
+    box-shadow:0 1px 2px rgba(0,0,0,0.25);
+  }
+  .switch input:checked + .switch-track{
+    background:linear-gradient(135deg, var(--purple), var(--purple-dark));
+  }
+  .switch input:checked + .switch-track::before{
+    transform:translateX(18px);
+  }
+  .locked-hint{
+    font-size:11px;
+    color:var(--purple-dark);
+    font-weight:700;
+    padding:8px 0;
+    text-align:center;
+  }
+  .lock-badge{
+    background:var(--purple);
+    box-shadow:0 2px 0 var(--purple-dark);
+  }
+
+  .add-btn{
+    width:100%;
+    padding:12px;
+    background:linear-gradient(135deg, #E9F9F1, #D6F3E3);
+    border:2px dashed var(--green);
+    color:var(--green-dark);
+    border-radius:12px;
+    font-family:'Baloo 2',sans-serif;
+    font-weight:700;
+    font-size:14px;
+    cursor:pointer;
+  }
+  .add-btn:active{filter:brightness(0.96);}
+
+  .calc-btn{
+    width:100%;
+    padding:16px;
+    background:linear-gradient(120deg, var(--orange), var(--pink));
+    border:none;
+    border-radius:14px;
+    color:#fff;
+    font-family:'Baloo 2',sans-serif;
+    font-weight:800;
+    font-size:17px;
+    letter-spacing:0.3px;
+    cursor:pointer;
+    box-shadow:0 4px 0 var(--orange-dark);
+    margin-top:4px;
+  }
+  .calc-btn:active{transform:translateY(2px); box-shadow:0 2px 0 var(--orange-dark);}
+
+  #results{margin-top:18px;}
+  #results h2{
+    font-size:15.5px; font-weight:700; color:var(--purple-dark); margin:0 0 12px;
+  }
+
+  .hazri-card{
+    border-radius:14px;
+    padding:0;
+    margin-bottom:14px;
+    box-shadow:0 4px 14px rgba(70,40,120,0.14);
+    overflow:hidden;
+    position:relative;
+  }
+  .hazri-top{
+    padding:11px 14px;
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+  }
+  .hazri-top .name{color:#fff; font-weight:700; font-size:15px; text-shadow:0 1px 0 rgba(0,0,0,0.15);}
+  .stamp{
+    font-family:'JetBrains Mono',monospace;
+    font-weight:700;
+    font-size:11px;
+    color:var(--charcoal);
+    background:var(--yellow);
+    border-radius:7px;
+    padding:3px 9px;
+    transform:rotate(-4deg);
+    box-shadow:0 2px 0 #C99A1C;
+  }
+  .hazri-body{
+    display:grid;
+    grid-template-columns:1fr 1fr;
+    background:#fff;
+  }
+  .hazri-cell{
+    padding:12px 14px;
+    border-right:1px dashed #EADFFA;
+  }
+  .hazri-cell:last-child{border-right:none;}
+  .hazri-cell .lbl{font-size:11px; color:#8A7FB0; font-weight:700;}
+  .hazri-cell .val{font-family:'JetBrains Mono',monospace; font-weight:700; font-size:18px; color:var(--ink); margin-top:2px;}
+  .hazri-cell.pay .val{color:var(--green-dark);}
+  .hazri-cell.hrs .val{color:var(--pink-dark);}
+
+  .summary-card{
+    background:linear-gradient(135deg, var(--charcoal), #3B3163);
+    border-radius:14px;
+    padding:14px 16px;
+    margin-top:6px;
+  }
+  .summary-card .row{
+    display:flex; justify-content:space-between;
+    font-family:'JetBrains Mono',monospace;
+    font-size:13px;
+    color:#D8CCF7;
+    padding:4px 0;
+  }
+  .summary-card .row b{color:#fff;}
+  .summary-card .row.final{
+    border-top:1px dashed #5a5285;
+    margin-top:6px; padding-top:8px;
+    color:var(--yellow);
+    font-weight:700;
+    font-size:14px;
+  }
+  .warn{
+    background:#FFE3E3;
+    color:#9A1F3A;
+    border:2px solid var(--pink);
+    border-radius:10px;
+    padding:10px 12px;
+    font-size:13px;
+    font-weight:700;
+    margin-bottom:12px;
+  }
+  .empty-msg{
+    text-align:center;
+    color:#8A7FB0;
+    font-size:13px;
+    padding:20px 0;
+    font-weight:600;
+  }
+
+  /* top utility bar (date, dark/font toggle, undo/save/history) — sits above everything */
+  .top-bar{
+    background:linear-gradient(120deg, var(--charcoal), #332C5C);
+    padding:12px 16px 14px;
+    position:relative;
+    z-index:5;
+  }
+  .top-bar-row{
+    display:flex;
+    align-items:flex-end;
+    gap:8px;
+    margin-bottom:10px;
+  }
+  .top-bar label{
+    color:#B9AEDE;
+    font-size:11px;
+    font-weight:700;
+    margin-bottom:5px;
+  }
+  .top-bar input[type=date]{
+    width:100%;
+    padding:9px 10px;
+    border-radius:9px;
+    border:1.5px solid #4A4270;
+    background:#241F3D;
+    color:#F1EAFB;
+    font-family:'JetBrains Mono',monospace;
+    font-size:13.5px;
+    font-weight:600;
+    color-scheme:dark;
+  }
+  .top-bar input[type=date]:focus{outline:2px solid var(--yellow); outline-offset:1px;}
+  .top-bar .icon-btn{
+    background:rgba(255,255,255,0.12);
+    flex-shrink:0;
+  }
+  .top-bar .icon-btn:active{background:rgba(255,255,255,0.22);}
+  .top-bar .action-row{margin-top:0;}
+  .top-bar .mini-btn{
+    background:rgba(255,255,255,0.08);
+    border-color:rgba(255,255,255,0.18);
+    color:#EDE8FB;
+  }
+  .top-bar .mini-btn:active{background:rgba(255,255,255,0.18);}
+  .top-bar .mini-btn.del{color:#F5A7C8;}
+  .top-bar .save-status{color:var(--yellow);}
+  .top-bar #historyPanel{margin-top:10px;}
+  .top-bar .history-item{background:#241F3D; border-color:#4A4270;}
+  .top-bar .history-date{color:#D9CCF7;}
+  .top-bar .history-cols{color:#9C90C4;}
+  .top-bar .empty-msg{color:#9C90C4;}
+  .top-bar .warn{background:#3A2233; color:#F5A7C8; border-color:#7A3355;}
+
+  .icon-btn{
+    width:36px; height:36px;
+    border-radius:50%;
+    border:none;
+    background:rgba(255,255,255,0.25);
+    color:#fff;
+    font-size:16px;
+    cursor:pointer;
+    display:flex; align-items:center; justify-content:center;
+    backdrop-filter:blur(2px);
+  }
+  .icon-btn:active{background:rgba(255,255,255,0.4);}
+
+  /* action row: undo / save / history */
+  .action-row{
+    display:grid;
+    grid-template-columns:1fr 1fr 1fr;
+    gap:8px;
+    margin-top:12px;
+  }
+  .mini-btn{
+    padding:11px 6px;
+    border-radius:10px;
+    border:2px solid #E4DEF5;
+    background:#fff;
+    color:var(--purple-dark);
+    font-family:'Baloo 2',sans-serif;
+    font-weight:700;
+    font-size:12.5px;
+    cursor:pointer;
+  }
+  .mini-btn:active{background:#F3EEFF;}
+  .mini-btn.del{color:var(--pink-dark); border-color:#F9D6E6;}
+  .save-status{
+    text-align:center;
+    font-size:12.5px;
+    font-weight:700;
+    color:var(--green-dark);
+    margin-top:8px;
+    opacity:0;
+    transition:opacity 0.3s;
+    min-height:16px;
+  }
+  #historyPanel{margin-top:10px;}
+  .history-item{
+    background:#fff;
+    border:2px solid #E4DEF5;
+    border-radius:12px;
+    padding:10px 12px;
+    margin-bottom:8px;
+  }
+  .history-top{
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+    margin-bottom:8px;
+  }
+  .history-date{font-weight:800; font-size:13.5px; color:var(--purple-dark);}
+  .history-cols{font-size:11.5px; color:#8A7FB0; font-weight:700;}
+  .history-actions{display:flex; gap:8px;}
+  .history-actions .mini-btn{flex:1;}
+
+  /* dark mode */
+  body.dark-mode{
+    --bg1:#171331; --bg2:#1F1A3B; --card:#241F3D; --ink:#EDE8FB;
+  }
+  body.dark-mode .card{box-shadow:0 4px 14px rgba(0,0,0,0.45); border-color:#3A3363;}
+  body.dark-mode label{color:#D9CCF7;}
+  body.dark-mode input[type=number], body.dark-mode input[type=text]{
+    background:#1C1836; border-color:#453D75; color:#F1EAFB;
+  }
+  body.dark-mode .mult-hint{color:#9C90C4;}
+  body.dark-mode .lock-row{background:#332C5C;}
+  body.dark-mode .lock-row .lock-text{color:#D9CCF7;}
+  body.dark-mode .hazri-body{background:#241F3D;}
+  body.dark-mode .hazri-cell{border-color:#3A3363;}
+  body.dark-mode .hazri-cell .lbl{color:#9C90C4;}
+  body.dark-mode .hazri-cell .val{color:#F1EAFB;}
+  body.dark-mode .mini-btn{background:#241F3D; border-color:#453D75; color:#D9CCF7;}
+  body.dark-mode .history-item{background:#241F3D; border-color:#453D75;}
+  body.dark-mode .history-date{color:#D9CCF7;}
+  body.dark-mode #results h2{color:#D9CCF7;}
+  body.dark-mode .empty-msg{color:#9C90C4;}
+
+  /* big font mode (for sunlight readability) */
+  body.big-font header h1{font-size:clamp(17px, 6vw, 23px) !important;}
+  body.big-font header p{font-size:14.5px;}
+  body.big-font label{font-size:15px;}
+  body.big-font input[type=number], body.big-font input[type=text]{font-size:17px; padding:13px 14px;}
+  body.big-font .card h2{font-size:17.5px;}
+  body.big-font .totals .val{font-size:16.5px;}
+  body.big-font .totals .lbl{font-size:11.5px;}
+  body.big-font .hazri-top .name{font-size:17px;}
+  body.big-font .hazri-cell .val{font-size:20px;}
+  body.big-font .hazri-cell .lbl{font-size:12.5px;}
+  body.big-font .calc-btn{font-size:19px; padding:18px;}
+  body.big-font .mini-btn{font-size:14px; padding:13px 6px;}
+  body.big-font .lock-row .lock-text{font-size:13.5px;}
+  body.big-font .stamp{font-size:12.5px;}
+</style>
+</head>
+<body>
+
+<div class="top-bar">
+  <div class="top-bar-row">
+    <div style="flex:1;">
+      <label for="workDate">Tareek (Date)</label>
+      <input type="date" id="workDate">
+    </div>
+    <button class="icon-btn" id="darkToggle" onclick="toggleDark()">🌙</button>
+    <button class="icon-btn" id="fontToggle" onclick="toggleFont()">🔤</button>
+  </div>
+  <div class="action-row">
+    <button class="mini-btn" onclick="undoLast()">↩️ Undo</button>
+    <button class="mini-btn" onclick="saveHisab()">💾 Save</button>
+    <button class="mini-btn" onclick="toggleHistoryPanel()">📜 History</button>
+  </div>
+  <div class="save-status" id="saveStatus"></div>
+  <div id="historyPanel" style="display:none;"></div>
+</div>
+
+<header>
+  <h1>🧱 Kolam Mazdoori Calculator</h1>
+  <p>Kolam ginti daalo, mazdoor jodo — payment aur ghanta dono apne aap nikal jayega</p>
+</header>
+
+<div class="wrap">
+
+  <div class="card blue">
+    <h2><span class="num">1</span> Kolam ki Ginti</h2>
+    <label for="columns">Kitne Kolam Khade Hue</label>
+    <input type="number" id="columns" min="0" value="1" oninput="updateTotals()">
+    <div style="margin-top:10px;">
+      <label for="teamSize">Standard Team Size (Lock Formula ke liye)</label>
+      <input type="number" id="teamSize" min="1" value="3">
+    </div>
+    <div style="margin-top:10px;">
+      <label for="commissionRate">Thekedar Commission (₹ per Kolam)</label>
+      <input type="number" id="commissionRate" min="0" value="500" oninput="updateTotals()">
+    </div>
+    <div class="totals">
+      <div><div class="lbl">Total Mila</div><div class="val" id="totalReceived">₹0</div></div>
+      <div><div class="lbl">Thekedar Commission</div><div class="val" id="contractorCut">₹0</div></div>
+      <div><div class="lbl">Mazdoori Pool</div><div class="val" id="workerPool">₹0</div></div>
+    </div>
+  </div>
+
+  <div class="card purple">
+    <h2><span class="num" id="workerCountBadge">0</span> Mazdoor Jodo</h2>
+    <div id="workerList"></div>
+    <button class="add-btn" onclick="addWorker()">+ Mazdoor Jodo</button>
+  </div>
+
+  <button class="calc-btn" onclick="calculate()">👷 Hisab Nikalo</button>
+
+  <div id="results"></div>
+
+</div>
+
+<script>
+let workerCount = 0;
+const cardColors = [
+  ['#2E86DE','#1B5FA8'],   // blue
+  ['#0EA672','#087A54'],   // green
+  ['#7B4FE0','#5A32B8'],   // purple
+  ['#F0388A','#C41F6E'],   // pink
+  ['#FF7A33','#E35C15'],   // orange
+];
+
+function addWorker(name="", rate="", hours=8){
+  workerCount++;
+  const id = workerCount;
+  const div = document.createElement('div');
+  div.className = 'worker-row';
+  div.id = 'worker-' + id;
+  div.innerHTML = `
+    <button class="remove-btn" onclick="removeWorker(${id})">✕</button>
+    <div class="grid">
+      <div class="full">
+        <label>Mazdoor ka Naam</label>
+        <input type="text" id="name-${id}" placeholder="Jaise: Ramu Mistri" value="${name}">
+      </div>
+      <div>
+        <label>8 Ghante ka Rate (₹)</label>
+        <input type="number" id="rate-${id}" placeholder="600" value="${rate}">
+      </div>
+      <div>
+        <label>Kaam ke Ghante</label>
+        <input type="number" id="hours-${id}" step="0.5" min="0" placeholder="8" value="${hours}">
+      </div>
+      <div class="full mult-hint" id="hint-${id}">Jaise: 8 ghanta, 12 ghanta, 15 ghanta — jo bhi asal me kaam kiya</div>
+      <div class="full lock-row">
+        <span class="lock-text">🔒 Fixed Ghanta Lock (standard team formula se)</span>
+        <label class="switch">
+          <input type="checkbox" id="lock-${id}" onchange="toggleLock(${id})">
+          <span class="switch-track"></span>
+        </label>
+      </div>
+    </div>
+  `;
+  document.getElementById('workerList').appendChild(div);
+  refreshWorkerUI();
+}
+
+function refreshWorkerUI(){
+  const rows = document.querySelectorAll('.worker-row');
+  document.getElementById('workerCountBadge').textContent = rows.length;
+  const baseBg = document.body.classList.contains('dark-mode') ? '#241F3D' : '#FBF9FF';
+  rows.forEach((row, i) => {
+    const [c1, c2] = cardColors[i % cardColors.length];
+    row.style.borderLeftColor = c1;
+    row.style.borderColor = c1 + '55';
+    row.style.background = `linear-gradient(160deg, ${c1}22 0%, ${baseBg} 55%)`;
+  });
+}
+
+function toggleLock(id){
+  const locked = document.getElementById('lock-'+id).checked;
+  const hoursInput = document.getElementById('hours-'+id);
+  const hint = document.getElementById('hint-'+id);
+  hoursInput.disabled = locked;
+  if(locked){
+    hoursInput.style.opacity = '0.5';
+    hint.textContent = 'Lock hai — ghanta formula se apne aap set hoga, manually badal nahi sakte';
+  } else {
+    hoursInput.style.opacity = '1';
+    hint.textContent = 'Jaise: 8 ghanta, 12 ghanta, 15 ghanta — jo bhi asal me kaam kiya';
+  }
+}
+
+function removeWorker(id){
+  const el = document.getElementById('worker-' + id);
+  if(el) el.remove();
+  refreshWorkerUI();
+}
+
+function updateTotals(){
+  const columns = parseFloat(document.getElementById('columns').value) || 0;
+  const commissionRate = parseFloat(document.getElementById('commissionRate').value) || 0;
+  const total = columns * 2000;
+  const cut = columns * commissionRate;
+  const pool = total - cut;
+  document.getElementById('totalReceived').textContent = '₹' + total.toLocaleString('en-IN');
+  document.getElementById('contractorCut').textContent = '₹' + cut.toLocaleString('en-IN');
+  document.getElementById('workerPool').textContent = '₹' + pool.toLocaleString('en-IN');
+  return {columns, total, cut, pool};
+}
+
+function captureState(){
+  const rows = document.querySelectorAll('.worker-row');
+  const workers = [];
+  rows.forEach(row => {
+    const id = row.id.split('-')[1];
+    workers.push({
+      name: document.getElementById('name-'+id).value,
+      rate: document.getElementById('rate-'+id).value,
+      hours: document.getElementById('hours-'+id).value,
+      locked: document.getElementById('lock-'+id).checked
+    });
+  });
+  return {
+    date: document.getElementById('workDate').value,
+    columns: document.getElementById('columns').value,
+    teamSize: document.getElementById('teamSize').value,
+    commissionRate: document.getElementById('commissionRate').value,
+    workers
+  };
+}
+
+function restoreState(state){
+  document.getElementById('workDate').value = state.date || '';
+  document.getElementById('columns').value = state.columns;
+  document.getElementById('teamSize').value = state.teamSize;
+  document.getElementById('commissionRate').value = state.commissionRate;
+  document.getElementById('workerList').innerHTML = '';
+  workerCount = 0;
+  (state.workers || []).forEach(w => {
+    addWorker(w.name, w.rate, w.hours);
+    const id = workerCount;
+    if(w.locked){
+      const lockBox = document.getElementById('lock-'+id);
+      if(lockBox){ lockBox.checked = true; toggleLock(id); }
+    }
+  });
+  updateTotals();
+}
+
+function showToast(msg){
+  const el = document.getElementById('saveStatus');
+  el.textContent = msg;
+  el.style.opacity = '1';
+  clearTimeout(window._toastTimer);
+  window._toastTimer = setTimeout(() => { el.style.opacity = '0'; }, 2600);
+}
+
+// ---- Save / History (persistent storage) ----
+async function saveHisab(){
+  if(typeof window.storage === 'undefined'){
+    showToast('⚠️ Save sirf Claude.ai app ke andar kaam karega');
+    return;
+  }
+  try{
+    const state = captureState();
+    if(!state.date){
+      state.date = new Date().toISOString().slice(0,10);
+      document.getElementById('workDate').value = state.date;
+    }
+    state.savedAt = Date.now();
+    const key = 'record:' + state.date + '-' + state.savedAt;
+    const result = await window.storage.set(key, JSON.stringify(state), false);
+    if(result){
+      showToast('✅ Hisab Save Ho Gaya — ' + state.date);
+      const panel = document.getElementById('historyPanel');
+      if(panel.style.display !== 'none'){ loadHistory(); }
+    } else {
+      showToast('⚠️ Save nahi hua, dobara try karo');
+    }
+  }catch(e){
+    console.error(e);
+    showToast('⚠️ Save karne me error aaya');
+  }
+}
+
+let historyOpen = false;
+async function toggleHistoryPanel(){
+  const panel = document.getElementById('historyPanel');
+  historyOpen = !historyOpen;
+  panel.style.display = historyOpen ? 'block' : 'none';
+  if(historyOpen){ await loadHistory(); }
+}
+
+async function loadHistory(){
+  const panel = document.getElementById('historyPanel');
+  if(typeof window.storage === 'undefined'){
+    panel.innerHTML = '<div class="warn">⚠️ History sirf Claude.ai app ke andar kaam karega (is preview mein nahi).</div>';
+    return;
+  }
+  panel.innerHTML = '<div class="empty-msg">Load ho raha hai...</div>';
+  try{
+    const listResult = await window.storage.list('record:', false);
+    const keys = (listResult && listResult.keys) ? listResult.keys : [];
+    if(keys.length === 0){
+      panel.innerHTML = '<div class="empty-msg">Abhi tak koi record save nahi hua.</div>';
+      return;
+    }
+    const records = [];
+    for(const k of keys){
+      try{
+        const r = await window.storage.get(k, false);
+        if(r && r.value){ records.push({key:k, data: JSON.parse(r.value)}); }
+      }catch(e){ /* skip unreadable key */ }
+    }
+    records.sort((a,b) => (b.data.savedAt||0) - (a.data.savedAt||0));
+    let html = '';
+    records.forEach(rec => {
+      const d = rec.data;
+      const totalWorkers = (d.workers || []).length;
+      html += `
+        <div class="history-item">
+          <div class="history-top">
+            <span class="history-date">📅 ${d.date || '—'}</span>
+            <span class="history-cols">${d.columns} Kolam • ${totalWorkers} Mazdoor</span>
+          </div>
+          <div class="history-actions">
+            <button class="mini-btn" onclick="loadRecord('${rec.key}')">📂 Load Karo</button>
+            <button class="mini-btn del" onclick="deleteRecord('${rec.key}')">🗑️ Delete</button>
+          </div>
+        </div>
+      `;
+    });
+    panel.innerHTML = html;
+  }catch(e){
+    console.error(e);
+    panel.innerHTML = '<div class="warn">History load nahi ho payi.</div>';
+  }
+}
+
+async function loadRecord(key){
+  try{
+    const r = await window.storage.get(key, false);
+    if(r && r.value){
+      const data = JSON.parse(r.value);
+      restoreState(data);
+      calculate();
+      showToast('📂 Record load ho gaya — ' + data.date);
+    }
+  }catch(e){
+    showToast('⚠️ Load nahi hua');
+  }
+}
+
+async function deleteRecord(key){
+  try{
+    await window.storage.delete(key, false);
+    loadHistory();
+    showToast('🗑️ Delete ho gaya');
+  }catch(e){
+    showToast('⚠️ Delete nahi hua');
+  }
+}
+
+// ---- Undo ----
+let calcHistory = [];
+function pushCalcHistory(){
+  calcHistory.push(JSON.stringify(captureState()));
+  if(calcHistory.length > 15) calcHistory.shift();
+}
+function undoLast(){
+  if(calcHistory.length < 2){
+    showToast('↩️ Undo ke liye koi purana step nahi hai');
+    return;
+  }
+  calcHistory.pop();
+  const prev = JSON.parse(calcHistory[calcHistory.length-1]);
+  restoreState(prev);
+  calculate();
+  showToast('↩️ Undo ho gaya');
+}
+
+// ---- Dark mode / big font preferences ----
+let prefs = {dark:false, bigFont:false};
+function applyPrefs(){
+  document.body.classList.toggle('dark-mode', prefs.dark);
+  document.body.classList.toggle('big-font', prefs.bigFont);
+  document.getElementById('darkToggle').textContent = prefs.dark ? '☀️' : '🌙';
+  document.getElementById('fontToggle').textContent = prefs.bigFont ? '🔡' : '🔤';
+  refreshWorkerUI();
+}
+async function savePrefs(){
+  try{ await window.storage.set('prefs', JSON.stringify(prefs), false); }catch(e){ /* ignore */ }
+}
+async function loadPrefs(){
+  try{
+    const r = await window.storage.get('prefs', false);
+    if(r && r.value){ prefs = JSON.parse(r.value); }
+  }catch(e){ /* no saved prefs yet */ }
+  applyPrefs();
+}
+function toggleDark(){
+  prefs.dark = !prefs.dark;
+  applyPrefs();
+  savePrefs();
+}
+function toggleFont(){
+  prefs.bigFont = !prefs.bigFont;
+  applyPrefs();
+  savePrefs();
+}
+
+function calculate(){
+  pushCalcHistory();
+  const {pool} = updateTotals();
+  const rows = document.querySelectorAll('.worker-row');
+  const results = document.getElementById('results');
+
+  if(rows.length === 0){
+    results.innerHTML = '<div class="warn">Pehle kam se kam ek mazdoor jodo.</div>';
+    return;
+  }
+
+  let workers = [];
+  rows.forEach(row => {
+    const id = row.id.split('-')[1];
+    const name = document.getElementById('name-'+id).value.trim() || 'Mazdoor';
+    const rate = parseFloat(document.getElementById('rate-'+id).value) || 0;
+    const hours = parseFloat(document.getElementById('hours-'+id).value) || 0;
+    const locked = document.getElementById('lock-'+id).checked;
+    workers.push({name, rate, hours, locked});
+  });
+
+  const columns = parseFloat(document.getElementById('columns').value) || 0;
+  const teamSize = parseFloat(document.getElementById('teamSize').value) || 3;
+  const totalWorkers = workers.length;
+
+  const lockedWorkers = workers.filter(w => w.locked);
+  const unlockedWorkers = workers.filter(w => !w.locked);
+
+  // locked workers: guaranteed hours based on standard team-size formula
+  lockedWorkers.forEach(w => {
+    w.cardHours = totalWorkers > 0 ? (columns * 8 * teamSize) / totalWorkers : 0;
+    w.finalPay = (w.rate / 8) * w.cardHours;
+  });
+
+  const sumLockedPay = lockedWorkers.reduce((s,w)=>s+w.finalPay, 0);
+  const remainingPool = pool - sumLockedPay;
+
+  // unlocked workers: same old formula, applied only to remaining pool
+  unlockedWorkers.forEach(w => w.base = (w.rate / 8) * w.hours);
+  const sumBase = unlockedWorkers.reduce((s,w)=>s+w.base, 0);
+  const sumRate = unlockedWorkers.reduce((s,w)=>s+w.rate, 0);
+  const leftover = remainingPool - sumBase;
+
+  unlockedWorkers.forEach(w => {
+    const leftoverShare = sumRate > 0 ? leftover * (w.rate / sumRate) : 0;
+    w.finalPay = w.base + leftoverShare;
+    w.cardHours = w.rate > 0 ? (w.finalPay * 8 / w.rate) : 0;
+  });
+
+  let html = '<h2>💰 Hazri Hisab</h2>';
+
+  const totalPaidCheck = workers.reduce((s,w)=>s+w.finalPay, 0);
+  if(totalPaidCheck > pool + 0.5){
+    html += `<div class="warn">⚠️ Rate/ghanta/lock milakar zyada bhar diye hain — pool (₹${pool.toLocaleString('en-IN')}) se ₹${(totalPaidCheck-pool).toFixed(0)} zyada baant rahe ho.</div>`;
+  }
+
+  workers.forEach((w, i) => {
+    const [c1, c2] = cardColors[i % cardColors.length];
+    const badgeClass = w.locked ? 'stamp lock-badge' : 'stamp';
+    const badgeText = w.locked ? `🔒 Locked` : `${w.hours} Ghanta Kaam`;
+    html += `
+      <div class="hazri-card">
+        <div class="hazri-top" style="background:linear-gradient(120deg, ${c1}, ${c2});">
+          <span class="name">${w.name}</span>
+          <span class="${badgeClass}">${badgeText}</span>
+        </div>
+        <div class="hazri-body">
+          <div class="hazri-cell">
+            <div class="lbl">8 Ghante Rate</div>
+            <div class="val">₹${w.rate.toLocaleString('en-IN')}</div>
+          </div>
+          <div class="hazri-cell pay">
+            <div class="lbl">Kul Payment</div>
+            <div class="val">₹${Math.round(w.finalPay).toLocaleString('en-IN')}</div>
+          </div>
+          <div class="hazri-cell hrs full" style="grid-column:1/-1; border-right:none; border-top:1px dashed #EADFFA;">
+            <div class="lbl">Card pe Bharne ke liye Ghanta</div>
+            <div class="val">${w.cardHours.toFixed(1)} Ghanta</div>
+          </div>
+        </div>
+      </div>
+    `;
+  });
+
+  const totalPaid = workers.reduce((s,w)=>s+w.finalPay, 0);
+
+  html += `
+    <div class="summary-card">
+      <div class="row"><span>Mazdoori Pool</span><b>₹${pool.toLocaleString('en-IN')}</b></div>
+      <div class="row"><span>Sab Mazdooron ko Baata</span><b>₹${Math.round(totalPaid).toLocaleString('en-IN')}</b></div>
+      <div class="row final"><span>Baaki Bacha</span><span>₹${(pool-totalPaid).toFixed(0)}</span></div>
+    </div>
+  `;
+
+  results.innerHTML = html;
+}
+
+document.getElementById('workDate').value = new Date().toISOString().slice(0,10);
+addWorker();
+addWorker();
+addWorker();
+updateTotals();
+loadPrefs();
+</script>
+
+</body>
+</html>
