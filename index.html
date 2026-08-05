@@ -4,6 +4,13 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Kolam Mazdoori Calculator</title>
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#7B4FE0">
+<link rel="apple-touch-icon" href="icon-192.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Kolam Hisab">
+<link rel="icon" href="icon-192.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@500;600;700;800&family=JetBrains+Mono:wght@500;600;700&display=swap" rel="stylesheet">
 <style>
@@ -406,6 +413,21 @@
   .top-bar .history-cols{color:#9C90C4;}
   .top-bar .empty-msg{color:#9C90C4;}
   .top-bar .warn{background:#3A2233; color:#F5A7C8; border-color:#7A3355;}
+  .install-btn{
+    width:100%;
+    padding:11px;
+    margin-bottom:10px;
+    background:linear-gradient(120deg, var(--yellow), var(--orange));
+    border:none;
+    border-radius:10px;
+    color:var(--charcoal);
+    font-family:'Baloo 2',sans-serif;
+    font-weight:800;
+    font-size:13.5px;
+    cursor:pointer;
+    box-shadow:0 2px 0 var(--orange-dark);
+  }
+  .install-btn:active{transform:translateY(1px); box-shadow:0 1px 0 var(--orange-dark);}
 
   .icon-btn{
     width:36px; height:36px;
@@ -519,6 +541,7 @@
     <button class="icon-btn" id="darkToggle" onclick="toggleDark()">🌙</button>
     <button class="icon-btn" id="fontToggle" onclick="toggleFont()">🔤</button>
   </div>
+  <button class="install-btn" id="installBtn" onclick="installApp()" style="display:none;">📲 App Install Karo (Home Screen Pe)</button>
   <div class="action-row">
     <button class="mini-btn" onclick="undoLast()">↩️ Undo</button>
     <button class="mini-btn" onclick="saveHisab()">💾 Save</button>
@@ -702,12 +725,32 @@ function showToast(msg){
   window._toastTimer = setTimeout(() => { el.style.opacity = '0'; }, 2600);
 }
 
+// ---- Storage layer: uses browser localStorage when running standalone,
+// falls back to window.storage when running inside a Claude.ai artifact ----
+const localDB = {
+  async get(key){
+    const v = localStorage.getItem(key);
+    return v === null ? null : {key, value: v};
+  },
+  async set(key, value){
+    localStorage.setItem(key, value);
+    return {key, value};
+  },
+  async delete(key){
+    localStorage.removeItem(key);
+    return {key, deleted:true};
+  },
+  async list(prefix){
+    const keys = Object.keys(localStorage).filter(k => k.startsWith(prefix));
+    return {keys};
+  }
+};
+function getDB(){
+  return (typeof window.storage !== 'undefined') ? window.storage : null;
+}
+
 // ---- Save / History (persistent storage) ----
 async function saveHisab(){
-  if(typeof window.storage === 'undefined'){
-    showToast('⚠️ Save sirf Claude.ai app ke andar kaam karega');
-    return;
-  }
   try{
     const state = captureState();
     if(!state.date){
@@ -716,7 +759,8 @@ async function saveHisab(){
     }
     state.savedAt = Date.now();
     const key = 'record:' + state.date + '-' + state.savedAt;
-    const result = await window.storage.set(key, JSON.stringify(state), false);
+    const db = getDB();
+    const result = db ? await db.set(key, JSON.stringify(state), false) : await localDB.set(key, JSON.stringify(state));
     if(result){
       showToast('✅ Hisab Save Ho Gaya — ' + state.date);
       const panel = document.getElementById('historyPanel');
@@ -740,13 +784,10 @@ async function toggleHistoryPanel(){
 
 async function loadHistory(){
   const panel = document.getElementById('historyPanel');
-  if(typeof window.storage === 'undefined'){
-    panel.innerHTML = '<div class="warn">⚠️ History sirf Claude.ai app ke andar kaam karega (is preview mein nahi).</div>';
-    return;
-  }
   panel.innerHTML = '<div class="empty-msg">Load ho raha hai...</div>';
   try{
-    const listResult = await window.storage.list('record:', false);
+    const db = getDB();
+    const listResult = db ? await db.list('record:', false) : await localDB.list('record:');
     const keys = (listResult && listResult.keys) ? listResult.keys : [];
     if(keys.length === 0){
       panel.innerHTML = '<div class="empty-msg">Abhi tak koi record save nahi hua.</div>';
@@ -755,7 +796,7 @@ async function loadHistory(){
     const records = [];
     for(const k of keys){
       try{
-        const r = await window.storage.get(k, false);
+        const r = db ? await db.get(k, false) : await localDB.get(k);
         if(r && r.value){ records.push({key:k, data: JSON.parse(r.value)}); }
       }catch(e){ /* skip unreadable key */ }
     }
@@ -786,7 +827,8 @@ async function loadHistory(){
 
 async function loadRecord(key){
   try{
-    const r = await window.storage.get(key, false);
+    const db = getDB();
+    const r = db ? await db.get(key, false) : await localDB.get(key);
     if(r && r.value){
       const data = JSON.parse(r.value);
       restoreState(data);
@@ -800,7 +842,8 @@ async function loadRecord(key){
 
 async function deleteRecord(key){
   try{
-    await window.storage.delete(key, false);
+    const db = getDB();
+    if(db){ await db.delete(key, false); } else { await localDB.delete(key); }
     loadHistory();
     showToast('🗑️ Delete ho gaya');
   }catch(e){
@@ -836,11 +879,15 @@ function applyPrefs(){
   refreshWorkerUI();
 }
 async function savePrefs(){
-  try{ await window.storage.set('prefs', JSON.stringify(prefs), false); }catch(e){ /* ignore */ }
+  try{
+    const db = getDB();
+    if(db){ await db.set('prefs', JSON.stringify(prefs), false); } else { await localDB.set('prefs', JSON.stringify(prefs)); }
+  }catch(e){ /* ignore */ }
 }
 async function loadPrefs(){
   try{
-    const r = await window.storage.get('prefs', false);
+    const db = getDB();
+    const r = db ? await db.get('prefs', false) : await localDB.get('prefs');
     if(r && r.value){ prefs = JSON.parse(r.value); }
   }catch(e){ /* no saved prefs yet */ }
   applyPrefs();
@@ -959,6 +1006,36 @@ addWorker();
 addWorker();
 updateTotals();
 loadPrefs();
+
+// ---- PWA install prompt ----
+let deferredInstallPrompt = null;
+window.addEventListener('beforeinstallprompt', (e) => {
+  e.preventDefault();
+  deferredInstallPrompt = e;
+  document.getElementById('installBtn').style.display = 'block';
+});
+function installApp(){
+  const btn = document.getElementById('installBtn');
+  if(deferredInstallPrompt){
+    deferredInstallPrompt.prompt();
+    deferredInstallPrompt.userChoice.then(() => {
+      deferredInstallPrompt = null;
+      btn.style.display = 'none';
+    });
+  } else {
+    showToast('📲 Browser menu se "Add to Home Screen" chuno');
+  }
+}
+window.addEventListener('appinstalled', () => {
+  document.getElementById('installBtn').style.display = 'none';
+});
+
+// ---- Service worker (offline support + installability) ----
+if('serviceWorker' in navigator){
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('sw.js').catch(() => {});
+  });
+}
 </script>
 
 </body>
