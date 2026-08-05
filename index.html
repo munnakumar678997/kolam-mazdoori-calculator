@@ -3,13 +3,13 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Kolam Mazdoori Calculator</title>
+<title>Munna Kolam Mazdoori Calculator</title>
 <link rel="manifest" href="manifest.json">
 <meta name="theme-color" content="#7B4FE0">
 <link rel="apple-touch-icon" href="icon-192.png">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<meta name="apple-mobile-web-app-title" content="Kolam Hisab">
+<meta name="apple-mobile-web-app-title" content="Munna Kolam">
 <link rel="icon" href="icon-192.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@500;600;700;800&family=JetBrains+Mono:wght@500;600;700&display=swap" rel="stylesheet">
@@ -429,6 +429,35 @@
   }
   .install-btn:active{transform:translateY(1px); box-shadow:0 1px 0 var(--orange-dark);}
 
+  .update-banner{
+    position:fixed;
+    top:0; left:0; right:0;
+    z-index:200;
+    background:linear-gradient(90deg, var(--green), var(--green-dark));
+    color:#fff;
+    padding:11px 14px;
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    gap:10px;
+    font-family:'Baloo 2', sans-serif;
+    font-weight:700;
+    font-size:13.5px;
+    box-shadow:0 3px 10px rgba(0,0,0,0.3);
+  }
+  .update-banner button{
+    background:#fff;
+    color:var(--green-dark);
+    border:none;
+    border-radius:8px;
+    padding:8px 14px;
+    font-weight:800;
+    font-size:12.5px;
+    font-family:'Baloo 2', sans-serif;
+    cursor:pointer;
+    flex-shrink:0;
+  }
+
   .icon-btn{
     width:36px; height:36px;
     border-radius:50%;
@@ -532,6 +561,11 @@
 </head>
 <body>
 
+<div id="updateBanner" class="update-banner" style="display:none;">
+  <span>🔄 Naya Update Aaya Hai!</span>
+  <button onclick="applyUpdate()">Update Karo</button>
+</div>
+
 <div class="top-bar">
   <div class="top-bar-row">
     <div style="flex:1;">
@@ -552,7 +586,7 @@
 </div>
 
 <header>
-  <h1>🧱 Kolam Mazdoori Calculator</h1>
+  <h1>🧱 Munna Kolam Calculator</h1>
   <p>Kolam ginti daalo, mazdoor jodo — payment aur ghanta dono apne aap nikal jayega</p>
 </header>
 
@@ -1030,10 +1064,37 @@ window.addEventListener('appinstalled', () => {
   document.getElementById('installBtn').style.display = 'none';
 });
 
-// ---- Service worker (offline support + installability) ----
+// ---- Service worker (offline support + installability + auto-update popup) ----
+let newWorker;
+function applyUpdate(){
+  if(newWorker){
+    newWorker.postMessage({type:'SKIP_WAITING'});
+  }
+  window.location.reload();
+}
 if('serviceWorker' in navigator){
   window.addEventListener('load', () => {
-    navigator.serviceWorker.register('sw.js').catch(() => {});
+    navigator.serviceWorker.register('sw.js').then((reg) => {
+      // check for a new version right away and then every 60s
+      reg.update();
+      setInterval(() => reg.update(), 60000);
+
+      reg.addEventListener('updatefound', () => {
+        newWorker = reg.installing;
+        if(!newWorker) return;
+        newWorker.addEventListener('statechange', () => {
+          if(newWorker.state === 'installed' && navigator.serviceWorker.controller){
+            document.getElementById('updateBanner').style.display = 'flex';
+          }
+        });
+      });
+    }).catch(() => {});
+
+    let refreshed = false;
+    navigator.serviceWorker.addEventListener('controllerchange', () => {
+      if(refreshed) return;
+      refreshed = true;
+    });
   });
 }
 </script>
