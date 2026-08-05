@@ -1,4 +1,6 @@
-const CACHE_NAME = 'kolam-hisab-v1';
+// IMPORTANT: bump this version string on every future deploy so browsers
+// detect the change and the in-app "Update Available" popup appears.
+const CACHE_NAME = 'kolam-hisab-v2';
 const ASSETS = [
   './',
   './index.html',
@@ -6,6 +8,12 @@ const ASSETS = [
   './icon-192.png',
   './icon-512.png'
 ];
+
+self.addEventListener('message', (event) => {
+  if(event.data && event.data.type === 'SKIP_WAITING'){
+    self.skipWaiting();
+  }
+});
 
 self.addEventListener('install', (event) => {
   event.waitUntil(
