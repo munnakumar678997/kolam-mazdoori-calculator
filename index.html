@@ -678,6 +678,7 @@ function refreshWorkerUI(){
     row.style.borderColor = c1 + '55';
     row.style.background = `linear-gradient(160deg, ${c1}22 0%, ${baseBg} 55%)`;
   });
+  if(typeof scheduleAutosave === 'function'){ scheduleAutosave(); }
 }
 
 function toggleLock(id){
@@ -692,6 +693,7 @@ function toggleLock(id){
     hoursInput.style.opacity = '1';
     hint.textContent = 'Jaise: 8 ghanta, 12 ghanta, 15 ghanta — jo bhi asal me kaam kiya';
   }
+  if(typeof scheduleAutosave === 'function'){ scheduleAutosave(); }
 }
 
 function removeWorker(id){
@@ -1034,10 +1036,56 @@ function calculate(){
   results.innerHTML = html;
 }
 
+// ---- Autosave draft (protects against app being reloaded/killed in background) ----
+let autosaveTimer;
+function scheduleAutosave(){
+  clearTimeout(autosaveTimer);
+  autosaveTimer = setTimeout(() => {
+    try{
+      localStorage.setItem('autosave-draft', JSON.stringify(captureState()));
+    }catch(e){ /* ignore quota/private-mode errors */ }
+  }, 500);
+}
+function saveAutosaveNow(){
+  try{ localStorage.setItem('autosave-draft', JSON.stringify(captureState())); }catch(e){}
+}
+function loadAutosaveOrDefault(){
+  try{
+    const raw = localStorage.getItem('autosave-draft');
+    if(raw){
+      const draft = JSON.parse(raw);
+      if(draft && Array.isArray(draft.workers) && draft.workers.length > 0){
+        restoreState(draft);
+        return true;
+      }
+    }
+  }catch(e){ /* ignore */ }
+  return false;
+}
+// autosave on any field change, anywhere in the form
+document.addEventListener('input', (e) => {
+  if(e.target && e.target.tagName === 'INPUT'){ scheduleAutosave(); }
+});
+document.addEventListener('change', (e) => {
+  if(e.target && e.target.tagName === 'INPUT'){ scheduleAutosave(); }
+});
+// save immediately when app goes to background, and re-check for updates when it comes back
+document.addEventListener('visibilitychange', () => {
+  if(document.visibilityState === 'hidden'){
+    saveAutosaveNow();
+  } else if(document.visibilityState === 'visible'){
+    if('serviceWorker' in navigator && navigator.serviceWorker.getRegistration){
+      navigator.serviceWorker.getRegistration().then((reg) => { if(reg) reg.update(); }).catch(() => {});
+    }
+  }
+});
+
 document.getElementById('workDate').value = new Date().toISOString().slice(0,10);
-addWorker();
-addWorker();
-addWorker();
+if(!loadAutosaveOrDefault()){
+  addWorker();
+  addWorker();
+  addWorker();
+}
 updateTotals();
 loadPrefs();
 
