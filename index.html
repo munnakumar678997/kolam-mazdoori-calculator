@@ -380,7 +380,7 @@
     font-weight:700;
     margin-bottom:5px;
   }
-  .top-bar input[type=date]{
+  .top-bar input[type=date], .top-bar input[type=month]{
     width:100%;
     padding:9px 10px;
     border-radius:9px;
@@ -392,7 +392,7 @@
     font-weight:600;
     color-scheme:dark;
   }
-  .top-bar input[type=date]:focus{outline:2px solid var(--yellow); outline-offset:1px;}
+  .top-bar input[type=date]:focus, .top-bar input[type=month]:focus{outline:2px solid var(--yellow); outline-offset:1px;}
   .top-bar .icon-btn{
     background:rgba(255,255,255,0.12);
     flex-shrink:0;
@@ -408,6 +408,58 @@
   .top-bar .mini-btn.del{color:#F5A7C8;}
   .top-bar .save-status{color:var(--yellow);}
   .top-bar #historyPanel{margin-top:10px;}
+
+  .hajiri-controls{
+    display:flex;
+    align-items:flex-end;
+    gap:8px;
+    margin-bottom:10px;
+  }
+  .hajiri-scroll{
+    overflow-x:auto;
+    -webkit-overflow-scrolling:touch;
+    border-radius:10px;
+    border:1.5px solid #4A4270;
+    max-height:340px;
+    overflow-y:auto;
+  }
+  .hajiri-table{
+    border-collapse:collapse;
+    width:max-content;
+    min-width:100%;
+    font-family:'JetBrains Mono',monospace;
+    font-size:11.5px;
+  }
+  .hajiri-table th, .hajiri-table td{
+    padding:7px 9px;
+    text-align:center;
+    border-bottom:1px solid #3A3363;
+    border-right:1px solid #2C2650;
+    white-space:nowrap;
+  }
+  .hajiri-table thead th{
+    background:#241F3D;
+    color:#D9CCF7;
+    font-weight:700;
+    position:sticky;
+    top:0;
+    z-index:1;
+  }
+  .hajiri-table .sticky-col{
+    position:sticky;
+    left:0;
+    background:#1C1836;
+    color:#F1EAFB;
+    text-align:left;
+    font-weight:700;
+    z-index:2;
+    min-width:96px;
+  }
+  .hajiri-table thead .sticky-col{z-index:3;}
+  .hajiri-table td.present{background:#1E3A2E; color:#7FE0A8; font-weight:700;}
+  .hajiri-table td.absent{color:#544C7A;}
+  .hajiri-table td.total-cell{background:#332C5C; color:#FFC93C; font-weight:700;}
+
   .top-bar .history-item{background:#241F3D; border-color:#4A4270;}
   .top-bar .history-date{color:#D9CCF7;}
   .top-bar .history-cols{color:#9C90C4;}
@@ -583,6 +635,18 @@
   </div>
   <div class="save-status" id="saveStatus"></div>
   <div id="historyPanel" style="display:none;"></div>
+
+  <button class="mini-btn" style="width:100%; margin-top:8px;" onclick="toggleHajiriPanel()">📋 Mahine Ki Hajiri Register</button>
+  <div id="hajiriPanel" style="display:none; margin-top:10px;">
+    <div class="hajiri-controls">
+      <div style="flex:1;">
+        <label for="hajiriMonth">Mahina Chuno</label>
+        <input type="month" id="hajiriMonth">
+      </div>
+      <button class="mini-btn" onclick="showHajiriRegister()">🔍 Dikhao</button>
+    </div>
+    <div id="hajiriResult"></div>
+  </div>
 </div>
 
 <header>
@@ -818,6 +882,93 @@ async function toggleHistoryPanel(){
   if(historyOpen){ await loadHistory(); }
 }
 
+// ---- Monthly Hajiri (Attendance) Register — built from saved history records ----
+let hajiriOpen = false;
+function toggleHajiriPanel(){
+  const panel = document.getElementById('hajiriPanel');
+  hajiriOpen = !hajiriOpen;
+  panel.style.display = hajiriOpen ? 'block' : 'none';
+  if(hajiriOpen){
+    const monthInput = document.getElementById('hajiriMonth');
+    if(!monthInput.value){ monthInput.value = new Date().toISOString().slice(0,7); }
+    showHajiriRegister();
+  }
+}
+
+function daysInMonth(monthStr){
+  const parts = monthStr.split('-').map(Number);
+  return new Date(parts[0], parts[1], 0).getDate();
+}
+
+async function showHajiriRegister(){
+  const monthStr = document.getElementById('hajiriMonth').value || new Date().toISOString().slice(0,7);
+  const panel = document.getElementById('hajiriResult');
+  panel.innerHTML = '<div class="empty-msg">Load ho raha hai...</div>';
+  try{
+    const db = getDB();
+    const listResult = db ? await db.list('record:', false) : await localDB.list('record:');
+    const keys = (listResult && listResult.keys) ? listResult.keys : [];
+    const records = [];
+    for(const k of keys){
+      try{
+        const r = db ? await db.get(k, false) : await localDB.get(k);
+        if(r && r.value){
+          const data = JSON.parse(r.value);
+          if(data.date && data.date.slice(0,7) === monthStr){ records.push(data); }
+        }
+      }catch(e){ /* skip unreadable key */ }
+    }
+    if(records.length === 0){
+      panel.innerHTML = '<div class="empty-msg">Is mahine ka koi record save nahi hua. Pehle "Save" karo.</div>';
+      return;
+    }
+
+    const workerMap = {};
+    records.forEach(rec => {
+      const day = parseInt((rec.date || '').split('-')[2], 10);
+      if(!day) return;
+      const columns = parseFloat(rec.columns) || 0;
+      const teamSize = parseFloat(rec.teamSize) || 3;
+      const commissionRate = parseFloat(rec.commissionRate) || 0;
+      const workersInput = (rec.workers || []).map(w => ({
+        name: (w.name || 'Mazdoor').trim() || 'Mazdoor',
+        rate: parseFloat(w.rate) || 0,
+        hours: parseFloat(w.hours) || 0,
+        locked: !!w.locked
+      }));
+      const {workers} = computeWorkerResults(columns, teamSize, commissionRate, workersInput);
+      workers.forEach(w => {
+        if(!workerMap[w.name]){ workerMap[w.name] = {days:{}, totalHours:0, totalPay:0}; }
+        workerMap[w.name].days[day] = (workerMap[w.name].days[day] || 0) + w.cardHours;
+        workerMap[w.name].totalHours += w.cardHours;
+        workerMap[w.name].totalPay += w.finalPay;
+      });
+    });
+
+    const dim = daysInMonth(monthStr);
+    const names = Object.keys(workerMap).sort();
+
+    let html = '<div class="hajiri-scroll"><table class="hajiri-table"><thead><tr><th class="sticky-col">Mazdoor</th>';
+    for(let d=1; d<=dim; d++){ html += `<th>${d}</th>`; }
+    html += '<th>Total Ghanta</th><th>Total ₹</th></tr></thead><tbody>';
+    names.forEach((name, i) => {
+      const [c1] = cardColors[i % cardColors.length];
+      const w = workerMap[name];
+      html += `<tr><td class="sticky-col" style="border-left:4px solid ${c1};">${name}</td>`;
+      for(let d=1; d<=dim; d++){
+        const h = w.days[d];
+        html += h ? `<td class="present">${h.toFixed(1)}</td>` : `<td class="absent">–</td>`;
+      }
+      html += `<td class="total-cell">${w.totalHours.toFixed(1)}</td><td class="total-cell">₹${Math.round(w.totalPay).toLocaleString('en-IN')}</td></tr>`;
+    });
+    html += '</tbody></table></div>';
+    panel.innerHTML = html;
+  }catch(e){
+    console.error(e);
+    panel.innerHTML = '<div class="warn">Hajiri register load nahi ho paya.</div>';
+  }
+}
+
 async function loadHistory(){
   const panel = document.getElementById('historyPanel');
   panel.innerHTML = '<div class="empty-msg">Load ho raha hai...</div>';
@@ -939,35 +1090,19 @@ function toggleFont(){
   savePrefs();
 }
 
-function calculate(){
-  pushCalcHistory();
-  const {pool} = updateTotals();
-  const rows = document.querySelectorAll('.worker-row');
-  const results = document.getElementById('results');
+function computePool(columns, commissionRate){
+  const total = columns * 2000;
+  const cut = columns * commissionRate;
+  return total - cut;
+}
 
-  if(rows.length === 0){
-    results.innerHTML = '<div class="warn">Pehle kam se kam ek mazdoor jodo.</div>';
-    return;
-  }
-
-  let workers = [];
-  rows.forEach(row => {
-    const id = row.id.split('-')[1];
-    const name = document.getElementById('name-'+id).value.trim() || 'Mazdoor';
-    const rate = parseFloat(document.getElementById('rate-'+id).value) || 0;
-    const hours = parseFloat(document.getElementById('hours-'+id).value) || 0;
-    const locked = document.getElementById('lock-'+id).checked;
-    workers.push({name, rate, hours, locked});
-  });
-
-  const columns = parseFloat(document.getElementById('columns').value) || 0;
-  const teamSize = parseFloat(document.getElementById('teamSize').value) || 3;
+function computeWorkerResults(columns, teamSize, commissionRate, workersInput){
+  const workers = workersInput.map(w => Object.assign({}, w));
+  const pool = computePool(columns, commissionRate);
   const totalWorkers = workers.length;
-
   const lockedWorkers = workers.filter(w => w.locked);
   const unlockedWorkers = workers.filter(w => !w.locked);
 
-  // locked workers: guaranteed hours based on standard team-size formula
   lockedWorkers.forEach(w => {
     w.cardHours = totalWorkers > 0 ? (columns * 8 * teamSize) / totalWorkers : 0;
     w.finalPay = (w.rate / 8) * w.cardHours;
@@ -976,7 +1111,6 @@ function calculate(){
   const sumLockedPay = lockedWorkers.reduce((s,w)=>s+w.finalPay, 0);
   const remainingPool = pool - sumLockedPay;
 
-  // unlocked workers: same old formula, applied only to remaining pool
   unlockedWorkers.forEach(w => w.base = (w.rate / 8) * w.hours);
   const sumBase = unlockedWorkers.reduce((s,w)=>s+w.base, 0);
   const sumRate = unlockedWorkers.reduce((s,w)=>s+w.rate, 0);
@@ -987,6 +1121,35 @@ function calculate(){
     w.finalPay = w.base + leftoverShare;
     w.cardHours = w.rate > 0 ? (w.finalPay * 8 / w.rate) : 0;
   });
+
+  return {workers, pool};
+}
+
+function calculate(){
+  pushCalcHistory();
+  updateTotals();
+  const columns = parseFloat(document.getElementById('columns').value) || 0;
+  const teamSize = parseFloat(document.getElementById('teamSize').value) || 3;
+  const commissionRate = parseFloat(document.getElementById('commissionRate').value) || 0;
+  const rows = document.querySelectorAll('.worker-row');
+  const results = document.getElementById('results');
+
+  if(rows.length === 0){
+    results.innerHTML = '<div class="warn">Pehle kam se kam ek mazdoor jodo.</div>';
+    return;
+  }
+
+  let workersInput = [];
+  rows.forEach(row => {
+    const id = row.id.split('-')[1];
+    const name = document.getElementById('name-'+id).value.trim() || 'Mazdoor';
+    const rate = parseFloat(document.getElementById('rate-'+id).value) || 0;
+    const hours = parseFloat(document.getElementById('hours-'+id).value) || 0;
+    const locked = document.getElementById('lock-'+id).checked;
+    workersInput.push({name, rate, hours, locked});
+  });
+
+  const {workers, pool} = computeWorkerResults(columns, teamSize, commissionRate, workersInput);
 
   let html = '<h2>💰 Hazri Hisab</h2>';
 
@@ -1081,6 +1244,7 @@ document.addEventListener('visibilitychange', () => {
 });
 
 document.getElementById('workDate').value = new Date().toISOString().slice(0,10);
+document.getElementById('hajiriMonth').value = new Date().toISOString().slice(0,7);
 if(!loadAutosaveOrDefault()){
   addWorker();
   addWorker();
