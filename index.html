@@ -38,8 +38,36 @@
     background:linear-gradient(180deg, var(--bg1) 0%, var(--bg2) 100%);
     font-family:'Baloo 2', sans-serif;
     color:var(--ink);
-    padding-bottom:60px;
+    padding-bottom:80px;
   }
+  .bottom-nav{
+    position:fixed;
+    bottom:0; left:0; right:0;
+    display:flex;
+    background:var(--charcoal);
+    box-shadow:0 -3px 12px rgba(0,0,0,0.3);
+    z-index:150;
+    padding-bottom:env(safe-area-inset-bottom, 0px);
+  }
+  .nav-btn{
+    flex:1;
+    background:none;
+    border:none;
+    padding:9px 6px 8px;
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    gap:3px;
+    color:#9C90C4;
+    font-family:'Baloo 2', sans-serif;
+    font-weight:700;
+    font-size:11px;
+    cursor:pointer;
+  }
+  .nav-btn .nav-icon{font-size:21px; line-height:1;}
+  .nav-btn.active{color:var(--yellow);}
+  .nav-btn.active .nav-icon{transform:scale(1.12);}
+  .tab-content{min-height:1px;}
   header{
     background:linear-gradient(120deg, var(--purple) 0%, var(--pink) 55%, var(--orange) 100%);
     padding:22px 20px 28px;
@@ -80,6 +108,7 @@
   }
   .card.blue{border-color:#CFE3FB;}
   .card.purple{border-color:#E4D9FB;}
+  .card.orange{border-color:#FFDCC2;}
 
   .card h2{
     font-size:15.5px;
@@ -91,6 +120,7 @@
   }
   .card.blue h2{color:var(--blue-dark);}
   .card.purple h2{color:var(--purple-dark);}
+  .card.orange h2{color:var(--orange-dark);}
 
   .card h2 .num{
     color:#fff;
@@ -104,6 +134,7 @@
   }
   .card.blue h2 .num{background:linear-gradient(135deg, var(--blue), var(--blue-dark));}
   .card.purple h2 .num{background:linear-gradient(135deg, var(--purple), var(--purple-dark));}
+  .card.orange h2 .num{background:linear-gradient(135deg, var(--orange), var(--orange-dark));}
 
   label{
     font-size:13px;
@@ -112,7 +143,7 @@
     display:block;
     margin-bottom:6px;
   }
-  input[type=number], input[type=text]{
+  input[type=number], input[type=text], input[type=month]{
     width:100%;
     padding:11px 12px;
     border-radius:10px;
@@ -618,6 +649,8 @@
   <button onclick="applyUpdate()">Update Karo</button>
 </div>
 
+<div id="calculatorTab" class="tab-content">
+
 <div class="top-bar">
   <div class="top-bar-row">
     <div style="flex:1;">
@@ -635,18 +668,6 @@
   </div>
   <div class="save-status" id="saveStatus"></div>
   <div id="historyPanel" style="display:none;"></div>
-
-  <button class="mini-btn" style="width:100%; margin-top:8px;" onclick="toggleHajiriPanel()">📋 Mahine Ki Hajiri Register</button>
-  <div id="hajiriPanel" style="display:none; margin-top:10px;">
-    <div class="hajiri-controls">
-      <div style="flex:1;">
-        <label for="hajiriMonth">Mahina Chuno</label>
-        <input type="month" id="hajiriMonth">
-      </div>
-      <button class="mini-btn" onclick="showHajiriRegister()">🔍 Dikhao</button>
-    </div>
-    <div id="hajiriResult"></div>
-  </div>
 </div>
 
 <header>
@@ -685,6 +706,36 @@
 
   <div id="results"></div>
 
+</div>
+
+</div>
+
+<div id="hajiriTab" class="tab-content" style="display:none;">
+
+  <header>
+    <h1>📋 Mahine Ki Hajiri</h1>
+    <p>Kis din, kaunsa mazdoor, kitna kaam kiya — sab ek jagah</p>
+  </header>
+
+  <div class="wrap">
+    <div class="card orange">
+      <h2><span class="num">📅</span> Mahina Chuno</h2>
+      <input type="month" id="hajiriMonth" oninput="showHajiriRegister()">
+      <div id="hajiriResult" style="margin-top:14px;"></div>
+    </div>
+  </div>
+
+</div>
+
+<div class="bottom-nav">
+  <button class="nav-btn active" id="navCalc" onclick="switchTab('calculator')">
+    <span class="nav-icon">🧮</span>
+    <span>Calculator</span>
+  </button>
+  <button class="nav-btn" id="navHajiri" onclick="switchTab('hajiri')">
+    <span class="nav-icon">📋</span>
+    <span>Hajiri</span>
+  </button>
 </div>
 
 <script>
@@ -882,19 +933,21 @@ async function toggleHistoryPanel(){
   if(historyOpen){ await loadHistory(); }
 }
 
-// ---- Monthly Hajiri (Attendance) Register — built from saved history records ----
-let hajiriOpen = false;
-function toggleHajiriPanel(){
-  const panel = document.getElementById('hajiriPanel');
-  hajiriOpen = !hajiriOpen;
-  panel.style.display = hajiriOpen ? 'block' : 'none';
-  if(hajiriOpen){
+// ---- Bottom nav tab switching ----
+function switchTab(tab){
+  document.getElementById('calculatorTab').style.display = tab === 'calculator' ? 'block' : 'none';
+  document.getElementById('hajiriTab').style.display = tab === 'hajiri' ? 'block' : 'none';
+  document.getElementById('navCalc').classList.toggle('active', tab === 'calculator');
+  document.getElementById('navHajiri').classList.toggle('active', tab === 'hajiri');
+  if(tab === 'hajiri'){
     const monthInput = document.getElementById('hajiriMonth');
     if(!monthInput.value){ monthInput.value = new Date().toISOString().slice(0,7); }
     showHajiriRegister();
   }
+  window.scrollTo(0,0);
 }
 
+// ---- Monthly Hajiri (Attendance) Register — built from saved history records ----
 function daysInMonth(monthStr){
   const parts = monthStr.split('-').map(Number);
   return new Date(parts[0], parts[1], 0).getDate();
