@@ -391,6 +391,17 @@
     padding:20px 0;
     font-weight:600;
   }
+  .hajiri-tip{
+    background:#FFF1E0;
+    border:1.5px solid #FFDCC2;
+    border-radius:10px;
+    padding:10px 12px;
+    font-size:12.5px;
+    font-weight:600;
+    color:var(--orange-dark);
+    margin-top:12px;
+    line-height:1.5;
+  }
 
   /* top utility bar (date, dark/font toggle, undo/save/history) — sits above everything */
   .top-bar{
@@ -721,6 +732,7 @@
     <div class="card orange">
       <h2><span class="num">📅</span> Mahina Chuno</h2>
       <input type="month" id="hajiriMonth" oninput="showHajiriRegister()">
+      <div class="hajiri-tip">💡 Sahi hajiri register ke liye har mazdoor ka <b>asli naam</b> bharo (jaise "Ramu Mistri"), aur roz usi spelling se likho — tabhi ek mazdoor ka poora mahina sahi se jud payega.</div>
       <div id="hajiriResult" style="margin-top:14px;"></div>
     </div>
   </div>
@@ -832,10 +844,11 @@ function updateTotals(){
 function captureState(){
   const rows = document.querySelectorAll('.worker-row');
   const workers = [];
-  rows.forEach(row => {
+  rows.forEach((row, idx) => {
     const id = row.id.split('-')[1];
+    const rawName = document.getElementById('name-'+id).value.trim();
     workers.push({
-      name: document.getElementById('name-'+id).value,
+      name: rawName || ('Mazdoor ' + (idx+1)),
       rate: document.getElementById('rate-'+id).value,
       hours: document.getElementById('hours-'+id).value,
       locked: document.getElementById('lock-'+id).checked
@@ -913,7 +926,10 @@ async function saveHisab(){
     const db = getDB();
     const result = db ? await db.set(key, JSON.stringify(state), false) : await localDB.set(key, JSON.stringify(state));
     if(result){
-      showToast('✅ Hisab Save Ho Gaya — ' + state.date);
+      const blankCount = state.workers.filter(w => /^Mazdoor \d+$/.test(w.name)).length;
+      let msg = '✅ Hisab Save Ho Gaya — ' + state.date;
+      if(blankCount > 0){ msg += ' (⚠️ ' + blankCount + ' mazdoor ka naam khaali tha, asli naam bharo)'; }
+      showToast(msg);
       const panel = document.getElementById('historyPanel');
       if(panel.style.display !== 'none'){ loadHistory(); }
     } else {
@@ -983,8 +999,8 @@ async function showHajiriRegister(){
       const columns = parseFloat(rec.columns) || 0;
       const teamSize = parseFloat(rec.teamSize) || 3;
       const commissionRate = parseFloat(rec.commissionRate) || 0;
-      const workersInput = (rec.workers || []).map(w => ({
-        name: (w.name || 'Mazdoor').trim() || 'Mazdoor',
+      const workersInput = (rec.workers || []).map((w, idx) => ({
+        name: (w.name || '').trim() || ('Mazdoor ' + (idx+1)),
         rate: parseFloat(w.rate) || 0,
         hours: parseFloat(w.hours) || 0,
         locked: !!w.locked
@@ -1193,9 +1209,9 @@ function calculate(){
   }
 
   let workersInput = [];
-  rows.forEach(row => {
+  rows.forEach((row, idx) => {
     const id = row.id.split('-')[1];
-    const name = document.getElementById('name-'+id).value.trim() || 'Mazdoor';
+    const name = document.getElementById('name-'+id).value.trim() || ('Mazdoor ' + (idx+1));
     const rate = parseFloat(document.getElementById('rate-'+id).value) || 0;
     const hours = parseFloat(document.getElementById('hours-'+id).value) || 0;
     const locked = document.getElementById('lock-'+id).checked;
