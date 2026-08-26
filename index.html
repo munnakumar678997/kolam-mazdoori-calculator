@@ -758,6 +758,10 @@
     <label for="columns">Kitne Kolam Khade Hue</label>
     <input type="number" id="columns" min="0" value="1" oninput="updateTotals()">
     <div style="margin-top:10px;">
+      <label for="kolamRate">Kolam Ka Rate (₹ per Kolam)</label>
+      <input type="number" id="kolamRate" min="0" value="2000" oninput="updateTotals()">
+    </div>
+    <div style="margin-top:10px;">
       <label for="teamSize">Standard Team Size (Lock Formula ke liye)</label>
       <input type="number" id="teamSize" min="1" value="3">
     </div>
@@ -895,8 +899,9 @@ function removeWorker(id){
 
 function updateTotals(){
   const columns = parseFloat(document.getElementById('columns').value) || 0;
+  const kolamRate = parseFloat(document.getElementById('kolamRate').value) || 0;
   const commissionRate = parseFloat(document.getElementById('commissionRate').value) || 0;
-  const total = columns * 2000;
+  const total = columns * kolamRate;
   const cut = columns * commissionRate;
   const pool = total - cut;
   document.getElementById('totalReceived').textContent = '₹' + total.toLocaleString('en-IN');
@@ -921,6 +926,7 @@ function captureState(){
   return {
     date: document.getElementById('workDate').value,
     columns: document.getElementById('columns').value,
+    kolamRate: document.getElementById('kolamRate').value,
     teamSize: document.getElementById('teamSize').value,
     commissionRate: document.getElementById('commissionRate').value,
     workers
@@ -930,6 +936,7 @@ function captureState(){
 function restoreState(state){
   document.getElementById('workDate').value = state.date || '';
   document.getElementById('columns').value = state.columns;
+  document.getElementById('kolamRate').value = state.kolamRate || 2000;
   document.getElementById('teamSize').value = state.teamSize;
   document.getElementById('commissionRate').value = state.commissionRate;
   document.getElementById('workerList').innerHTML = '';
@@ -1059,6 +1066,7 @@ async function showHajiriRegister(){
     const workerMap = {};
     records.forEach(rec => {
       const columns = parseFloat(rec.columns) || 0;
+      const kolamRate = parseFloat(rec.kolamRate) || 2000;
       const teamSize = parseFloat(rec.teamSize) || 3;
       const commissionRate = parseFloat(rec.commissionRate) || 0;
       const workersInput = (rec.workers || []).map((w, idx) => ({
@@ -1067,7 +1075,7 @@ async function showHajiriRegister(){
         hours: parseFloat(w.hours) || 0,
         locked: !!w.locked
       }));
-      const {workers} = computeWorkerResults(columns, teamSize, commissionRate, workersInput);
+      const {workers} = computeWorkerResults(columns, kolamRate, teamSize, commissionRate, workersInput);
       workers.forEach(w => {
         if(!workerMap[w.name]){ workerMap[w.name] = {entries:[], totalHours:0, totalPay:0}; }
         workerMap[w.name].entries.push({
@@ -1244,15 +1252,15 @@ function toggleFont(){
   savePrefs();
 }
 
-function computePool(columns, commissionRate){
-  const total = columns * 2000;
+function computePool(columns, kolamRate, commissionRate){
+  const total = columns * kolamRate;
   const cut = columns * commissionRate;
   return total - cut;
 }
 
-function computeWorkerResults(columns, teamSize, commissionRate, workersInput){
+function computeWorkerResults(columns, kolamRate, teamSize, commissionRate, workersInput){
   const workers = workersInput.map(w => Object.assign({}, w));
-  const pool = computePool(columns, commissionRate);
+  const pool = computePool(columns, kolamRate, commissionRate);
   const totalWorkers = workers.length;
   const lockedWorkers = workers.filter(w => w.locked);
   const unlockedWorkers = workers.filter(w => !w.locked);
@@ -1283,6 +1291,7 @@ function calculate(){
   pushCalcHistory();
   updateTotals();
   const columns = parseFloat(document.getElementById('columns').value) || 0;
+  const kolamRate = parseFloat(document.getElementById('kolamRate').value) || 0;
   const teamSize = parseFloat(document.getElementById('teamSize').value) || 3;
   const commissionRate = parseFloat(document.getElementById('commissionRate').value) || 0;
   const rows = document.querySelectorAll('.worker-row');
@@ -1303,7 +1312,7 @@ function calculate(){
     workersInput.push({name, rate, hours, locked});
   });
 
-  const {workers, pool} = computeWorkerResults(columns, teamSize, commissionRate, workersInput);
+  const {workers, pool} = computeWorkerResults(columns, kolamRate, teamSize, commissionRate, workersInput);
 
   let html = '<h2>💰 Hazri Hisab</h2>';
 
