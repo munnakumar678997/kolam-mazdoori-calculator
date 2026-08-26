@@ -502,6 +502,68 @@
   .hajiri-table td.absent{color:#544C7A;}
   .hajiri-table td.total-cell{background:#332C5C; color:#FFC93C; font-weight:700;}
 
+  .worker-list-item{
+    margin-bottom:12px;
+    border-radius:12px;
+    overflow:hidden;
+    box-shadow:0 3px 10px rgba(70,40,120,0.14);
+  }
+  .worker-list-header{
+    width:100%;
+    border:none;
+    padding:13px 14px;
+    display:flex;
+    align-items:center;
+    gap:10px;
+    cursor:pointer;
+    color:#fff;
+    font-family:'Baloo 2', sans-serif;
+    text-align:left;
+  }
+  .worker-list-header .wname{
+    font-weight:800;
+    font-size:15px;
+    flex-shrink:0;
+    text-shadow:0 1px 0 rgba(0,0,0,0.15);
+  }
+  .worker-list-header .wsummary{
+    font-family:'JetBrains Mono',monospace;
+    font-size:11px;
+    font-weight:700;
+    flex:1;
+    text-align:right;
+    line-height:1.5;
+    opacity:0.95;
+  }
+  .worker-list-header .wchevron{
+    font-size:16px;
+    flex-shrink:0;
+  }
+  .worker-detail{
+    background:#fff;
+    padding:6px 12px 10px;
+  }
+  .detail-table{
+    width:100%;
+    border-collapse:collapse;
+    font-family:'JetBrains Mono',monospace;
+    font-size:12px;
+  }
+  .detail-table th, .detail-table td{
+    padding:8px 6px;
+    text-align:left;
+    border-bottom:1px solid #EADFFA;
+  }
+  .detail-table th{
+    color:#8A7FB0;
+    font-weight:700;
+    font-size:10.5px;
+  }
+  .detail-table td{
+    color:var(--ink);
+    font-weight:700;
+  }
+
   .top-bar .history-item{background:#241F3D; border-color:#4A4270;}
   .top-bar .history-date{color:#D9CCF7;}
   .top-bar .history-cols{color:#9C90C4;}
@@ -635,6 +697,9 @@
   body.dark-mode .history-date{color:#D9CCF7;}
   body.dark-mode #results h2{color:#D9CCF7;}
   body.dark-mode .empty-msg{color:#9C90C4;}
+  body.dark-mode .worker-detail{background:#241F3D;}
+  body.dark-mode .detail-table th{color:#9C90C4;}
+  body.dark-mode .detail-table td{color:#F1EAFB; border-color:#3A3363;}
 
   /* big font mode (for sunlight readability) */
   body.big-font header h1{font-size:clamp(17px, 6vw, 23px) !important;}
@@ -732,7 +797,6 @@
     <div class="card orange">
       <h2><span class="num">📅</span> Mahina Chuno</h2>
       <input type="month" id="hajiriMonth" oninput="showHajiriRegister()">
-      <div class="hajiri-tip">💡 Sahi hajiri register ke liye har mazdoor ka <b>asli naam</b> bharo (jaise "Ramu Mistri"), aur roz usi spelling se likho — tabhi ek mazdoor ka poora mahina sahi se jud payega.</div>
       <div id="hajiriResult" style="margin-top:14px;"></div>
     </div>
   </div>
@@ -994,8 +1058,6 @@ async function showHajiriRegister(){
 
     const workerMap = {};
     records.forEach(rec => {
-      const day = parseInt((rec.date || '').split('-')[2], 10);
-      if(!day) return;
       const columns = parseFloat(rec.columns) || 0;
       const teamSize = parseFloat(rec.teamSize) || 3;
       const commissionRate = parseFloat(rec.commissionRate) || 0;
@@ -1007,35 +1069,58 @@ async function showHajiriRegister(){
       }));
       const {workers} = computeWorkerResults(columns, teamSize, commissionRate, workersInput);
       workers.forEach(w => {
-        if(!workerMap[w.name]){ workerMap[w.name] = {days:{}, totalHours:0, totalPay:0}; }
-        workerMap[w.name].days[day] = (workerMap[w.name].days[day] || 0) + w.cardHours;
+        if(!workerMap[w.name]){ workerMap[w.name] = {entries:[], totalHours:0, totalPay:0}; }
+        workerMap[w.name].entries.push({
+          date: rec.date,
+          hours: w.cardHours,
+          pay: w.finalPay,
+          rate: w.rate,
+          locked: w.locked,
+          columns: columns
+        });
         workerMap[w.name].totalHours += w.cardHours;
         workerMap[w.name].totalPay += w.finalPay;
       });
     });
 
-    const dim = daysInMonth(monthStr);
     const names = Object.keys(workerMap).sort();
-
-    let html = '<div class="hajiri-scroll"><table class="hajiri-table"><thead><tr><th class="sticky-col">Mazdoor</th>';
-    for(let d=1; d<=dim; d++){ html += `<th>${d}</th>`; }
-    html += '<th>Total Ghanta</th><th>Total ₹</th></tr></thead><tbody>';
+    let html = '';
     names.forEach((name, i) => {
-      const [c1] = cardColors[i % cardColors.length];
       const w = workerMap[name];
-      html += `<tr><td class="sticky-col" style="border-left:4px solid ${c1};">${name}</td>`;
-      for(let d=1; d<=dim; d++){
-        const h = w.days[d];
-        html += h ? `<td class="present">${h.toFixed(1)}</td>` : `<td class="absent">–</td>`;
-      }
-      html += `<td class="total-cell">${w.totalHours.toFixed(1)}</td><td class="total-cell">₹${Math.round(w.totalPay).toLocaleString('en-IN')}</td></tr>`;
+      w.entries.sort((a,b) => (a.date || '').localeCompare(b.date || ''));
+      const [c1, c2] = cardColors[i % cardColors.length];
+      const uid = 'wdet' + i;
+      html += `
+        <div class="worker-list-item">
+          <button class="worker-list-header" style="background:linear-gradient(120deg, ${c1}, ${c2});" onclick="toggleWorkerDetail('${uid}')">
+            <span class="wname">${name}</span>
+            <span class="wsummary">${w.entries.length} din • ${w.totalHours.toFixed(1)} ghanta<br>₹${Math.round(w.totalPay).toLocaleString('en-IN')}</span>
+            <span class="wchevron" id="chev-${uid}">▾</span>
+          </button>
+          <div class="worker-detail" id="${uid}" style="display:none;">
+            <table class="detail-table">
+              <thead><tr><th>Tareek</th><th>Rate</th><th>Ghanta</th><th>Payment</th></tr></thead>
+              <tbody>
+                ${w.entries.map(e => `<tr><td>${e.date}${e.locked ? ' 🔒' : ''}</td><td>₹${e.rate}</td><td>${e.hours.toFixed(1)}</td><td>₹${Math.round(e.pay).toLocaleString('en-IN')}</td></tr>`).join('')}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      `;
     });
-    html += '</tbody></table></div>';
     panel.innerHTML = html;
   }catch(e){
     console.error(e);
     panel.innerHTML = '<div class="warn">Hajiri register load nahi ho paya.</div>';
   }
+}
+
+function toggleWorkerDetail(uid){
+  const el = document.getElementById(uid);
+  const chev = document.getElementById('chev-'+uid);
+  const isOpen = el.style.display !== 'none';
+  el.style.display = isOpen ? 'none' : 'block';
+  if(chev){ chev.textContent = isOpen ? '▾' : '▴'; }
 }
 
 async function loadHistory(){
