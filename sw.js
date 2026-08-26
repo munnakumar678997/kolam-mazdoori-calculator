@@ -1,6 +1,6 @@
 // IMPORTANT: bump this version string on every future deploy so browsers
 // detect the change and the in-app "Update Available" popup appears.
-const CACHE_NAME = 'kolam-hisab-v7';
+const CACHE_NAME = 'kolam-hisab-v8';
 const STATIC_ASSETS = [
   './manifest.json',
   './icon-192.png',
